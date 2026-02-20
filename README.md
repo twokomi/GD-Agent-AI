@@ -64,8 +64,11 @@ Gate의 전체 진행 상태를 나타냅니다.
 ### R~AK: Joint Status (20개 컬럼)
 
 - `joint_status1` (R열) ~ `joint_status20` (AK열)
-- **중요**: Joint 1은 없음! (Flange-첫 Skirt는 FTC에서 선조립)
-- **사용**: Skirt 개수 - 1 = Joint 개수만큼 사용
+- **중요**: Joint 수 = Skirt 수 + 1 (양쪽 Flange 포함)
+  - Joint 1: 시작 Flange - Skirt 1
+  - Joint 2~N: Skirt 간 연결
+  - Joint N+1: Skirt N - 끝 Flange
+- **예시**: Skirt 11개 → Joint 12개 (Joint 1~12)
 - **나머지**: B (Blank) 또는 NaN
 
 #### Joint Status 코드 정의
@@ -192,41 +195,49 @@ SN|CT → SN|PB → SN|BV → SN|BN → SN|LS → SD (또는 SW|FU, SW|ROK)
 ### 기본 구조
 
 ```
-[Skirt 1] ─ [Joint 2] ─ [Skirt 2] ─ [Joint 3] ─ [Skirt 3] ─ ... ─ [Joint N] ─ [Skirt N]
+[Flange] ─ [Joint 1] ─ [Skirt 1] ─ [Joint 2] ─ [Skirt 2] ─ [Joint 3] ─ ... ─ [Joint N] ─ [Skirt N] ─ [Joint N+1] ─ [Flange]
 ```
 
 **중요:**
-- **Joint 1은 없음!** (Flange-첫 Skirt는 FTC에서 선조립)
-- Joint 번호 = Skirt 번호 + 1
-- 예: Skirt 1과 Skirt 2 사이 = Joint 2
+- **Joint 1 존재함!** (시작 Flange - Skirt 1 연결)
+- **Joint 수 = Skirt 수 + 1**
+- 예: Skirt 11개 → Joint 12개 (Joint 1~12)
+- Joint 1: Flange - Skirt 1
+- Joint 2~11: Skirt 간 연결 (10개)
+- Joint 12: Skirt 11 - Flange
 
 ### Skirt-Joint 매핑 규칙
 
-**6개 Skirt, 5개 Joint 예시:**
+**6개 Skirt, 7개 Joint 예시:**
 
 ```
-[Skirt 1] ─ [Joint 2] ─ [Skirt 2] ─ [Joint 3] ─ [Skirt 3] ─ [Joint 4] ─ [Skirt 4] ─ [Joint 5] ─ [Skirt 5] ─ [Joint 6] ─ [Skirt 6]
- index 0     index 1     index 1     index 2     index 2     index 3     index 3     index 4     index 4     index 5     index 5
+[Flange] ─ [J1] ─ [S1] ─ [J2] ─ [S2] ─ [J3] ─ [S3] ─ [J4] ─ [S4] ─ [J5] ─ [S5] ─ [J6] ─ [S6] ─ [J7] ─ [Flange]
+          index0  index0  index1  index1  index2  index2  index3  index3  index4  index4  index5  index5  index6
 ```
+
+**각 Skirt는 양쪽 Joint를 확인:**
+- **Skirt 1** (index 0): Joint 1 (index 0), Joint 2 (index 1)
+- **Skirt 2** (index 1): Joint 2 (index 1), Joint 3 (index 2)
+- **Skirt 3** (index 2): Joint 3 (index 2), Joint 4 (index 3)
+- ...
+- **Skirt 6** (index 5): Joint 6 (index 5), Joint 7 (index 6)
 
 **JavaScript 매핑:**
 ```javascript
-// Skirt index → Joint index 매핑
-// Skirt 1 (index 0) → Joint 2 (jointStatuses[1])
-// Skirt 2 (index 1) → Joint 3 (jointStatuses[2])
-// Skirt 3 (index 2) → Joint 4 (jointStatuses[3])
-// ...
-
-const jointIndex = skirtIndex + 1;
-const joint = jointStatuses[jointIndex];
+// 각 Skirt는 양쪽 Joint 확인
+const leftJoint = jointStatuses[skirtIndex];      // 왼쪽 Joint
+const rightJoint = jointStatuses[skirtIndex + 1]; // 오른쪽 Joint
 ```
 
 ### Joint 번호 규칙
 
-- **Joint No. = Section 기준 연속 번호 (01~N)**
-- 예: 10개 Can Section → Joint 9개 → 01~09
-- **FU-03** = 해당 Section의 3번째 Joint (Fit-up)
-- **FU-01은 없음** (Flange-첫 Skirt는 FTC에서 선조립)
+- **Joint No. = Section 기준 연속 번호 (01~N+1)**
+- 예: 11개 Can Section → Joint 12개 → 01~12
+- **FU-01** = Joint 1 (시작 Flange - Skirt 1)
+- **FU-02** = Joint 2 (Skirt 1 - Skirt 2)
+- **FU-03** = Joint 3 (Skirt 2 - Skirt 3)
+- ...
+- **FU-12** = Joint 12 (Skirt 11 - 끝 Flange)
 - MES 입력 시 Skirt ID 매핑: **FU-xx ↔ Txx** (동일 번호)
 
 ---
@@ -266,15 +277,17 @@ Gate door ← [Skirt 11(얇음)] ─ [Joint 11] ─ [Skirt 10] ─ [Joint 10] �
 
 **파싱 로직:**
 ```javascript
-// Excel에서 읽은 Joint Status 배열
-let jointStatuses = [null, 'FD', 'FDOD', 'FDIDOD', ...]; // index 0은 항상 null (Joint 1 없음)
+// Excel에서 읽은 Joint Status 배열 (20개)
+let jointStatuses = ["FDIDOD", "FD", "FD", "B", "B", ...]; // 예시
 
-// Rev_flag = 1이면 Joint 순서를 뒤집음 (index 0 제외)
+// Rev_flag = 1이면 Joint 순서를 뒤집음
 if (rev_flag === 1) {
-  const joints = jointStatuses.slice(1); // index 0 제외
-  joints.reverse(); // 뒤집기
-  jointStatuses = [null, ...joints]; // index 0에 null 다시 추가
+  jointStatuses.reverse(); // 전체 배열 뒤집기
 }
+
+// 사용 예:
+// Normal: Joint 1~12 (왼쪽부터 오른쪽)
+// Reverse: Joint 12~1 (왼쪽부터 오른쪽, 하지만 번호는 역순)
 ```
 
 ---
@@ -295,7 +308,7 @@ if (rev_flag === 1) {
 ### JavaScript 색상 결정 로직
 
 ```javascript
-function getSkirtColor(skirtIndex, skirtStatus, jointStatuses, skirtQty) {
+function getSkirtColor(skirtIndex, skirtStatus, jointStatuses) {
   // 1. Skirt Status가 SN|*이면 회색 (Growing Line 준비 안 됨)
   if (skirtStatus.startsWith('SN|')) {
     return '#5a6b78'; // ⬜ 회색
@@ -303,27 +316,22 @@ function getSkirtColor(skirtIndex, skirtStatus, jointStatuses, skirtQty) {
   
   // 2. Skirt Status가 SD, SW|*이면 Joint 확인
   if (skirtStatus === 'SD' || skirtStatus.startsWith('SW|')) {
-    // Joint 번호 = Skirt 번호 + 1
-    // 예: Skirt 1 (index 0) → Joint 2 (index 1)
-    const jointIndex = skirtIndex + 1;
-    const joint = jointStatuses[jointIndex];
+    // 양쪽 Joint 확인
+    const leftJoint = jointStatuses[skirtIndex];      // 왼쪽 Joint
+    const rightJoint = jointStatuses[skirtIndex + 1]; // 오른쪽 Joint
     
-    // Joint가 없거나 B(Blank)이면 노란색 (FU 전)
-    if (!joint || joint === 'B' || joint === '' || joint === 'NaN') {
-      return '#F7CD42'; // 🟨 노란색
-    }
-    
-    // Joint가 FDIDOD이면 녹색 (Cir-seam 완료)
-    if (joint === 'FDIDOD') {
+    // 양쪽 중 하나라도 FDIDOD이면 녹색 (Cir-seam 완료)
+    if (leftJoint === 'FDIDOD' || rightJoint === 'FDIDOD') {
       return '#4CAF50'; // 🟩 녹색
     }
     
-    // Joint가 FD*이면 흰색 (Fit-up 완료 ~ Cir-seam 완료 전)
-    if (joint.startsWith('FD')) {
+    // 양쪽 중 하나라도 FD*이면 흰색 (Fit-up 완료 ~ Cir-seam 완료 전)
+    if ((leftJoint && leftJoint.startsWith('FD')) || 
+        (rightJoint && rightJoint.startsWith('FD'))) {
       return '#FFFFFF'; // ⬜ 흰색
     }
     
-    // FD 전이면 노란색 (FW 등)
+    // Joint가 없거나 B(Blank)이면 노란색 (FU 전)
     return '#F7CD42'; // 🟨 노란색
   }
   
@@ -332,48 +340,55 @@ function getSkirtColor(skirtIndex, skirtStatus, jointStatuses, skirtQty) {
 }
 ```
 
-### 색상 변화 시나리오 (6 Skirts, 5 Joints 예시)
+### 색상 변화 시나리오 (3 Skirts, 4 Joints 예시)
 
 ```
-[Skirt 1] ─ [Joint 2] ─ [Skirt 2] ─ [Joint 3] ─ [Skirt 3] ─ [Joint 4] ─ [Skirt 4] ─ [Joint 5] ─ [Skirt 5] ─ [Joint 6] ─ [Skirt 6]
+[Flange] ─ [Joint 1] ─ [Skirt 1] ─ [Joint 2] ─ [Skirt 2] ─ [Joint 3] ─ [Skirt 3] ─ [Joint 4] ─ [Flange]
 ```
 
-#### Step 1: 초기 상태 (Lseam 완료)
+#### Step 1: Skirt 1만 라인 투입 (Lseam 완료)
 ```
-🟨 Skirt 1 (SD, Joint 2 없음) ─ ... ─ ... ─ ... ─ ... ─ ...
+[Flange] ─ [J1: 없음] ─ 🟨 S1 (SD, J1 없음, J2 없음) ─ ... ─ ... ─ ... ─ ...
 ```
-- Skirt 1: Joint 2 없음 → 노란색 ✅
+- Skirt 1: 양쪽 Joint 없음 → 노란색 ✅
 
-#### Step 2: Skirt 2 투입 후 Fit-up (Joint 2 = FD)
+#### Step 2: Skirt 2 투입 후 Joint 1 Fit-up (J1 = FD)
 ```
-⬜ Skirt 1 (SD, Joint 2 = FD) ─ Joint 2 (FD) ─ 🟨 Skirt 2 (SD, Joint 3 없음) ─ ... ─ ...
+[Flange] ─ [J1: FD] ─ ⬜ S1 (J1=FD, J2 없음) ─ [J2: 없음] ─ 🟨 S2 (J2 없음, J3 없음) ─ ... ─ ...
 ```
-- Skirt 1: Joint 2 = FD → 흰색 ✅
-- Skirt 2: Joint 3 없음 → 노란색 ✅
+- Skirt 1: 왼쪽 J1=FD, 오른쪽 J2 없음 → 흰색 ✅
+- Skirt 2: 양쪽 Joint 없음 → 노란색 ✅
 
-#### Step 3: Skirt 3 투입 후 Fit-up (Joint 3 = FD)
+#### Step 3: Joint 2 Fit-up (J2 = FD)
 ```
-⬜ Skirt 1 ─ Joint 2 (FD) ─ ⬜ Skirt 2 (SD, Joint 3 = FD) ─ Joint 3 (FD) ─ 🟨 Skirt 3 (SD, Joint 4 없음) ─ ...
+[Flange] ─ [J1: FD] ─ ⬜ S1 (J1=FD, J2=FD) ─ [J2: FD] ─ ⬜ S2 (J2=FD, J3 없음) ─ ... ─ ...
 ```
-- Skirt 1: Joint 2 = FD → 흰색 ✅
-- Skirt 2: Joint 3 = FD → 흰색 ✅
-- Skirt 3: Joint 4 없음 → 노란색 ✅
+- Skirt 1: 양쪽 모두 FD → 흰색 ✅
+- Skirt 2: 왼쪽 J2=FD, 오른쪽 J3 없음 → 흰색 ✅
 
-#### Step 4: Joint 3 Cir-seam 완료 (Joint 3 = FDIDOD)
+#### Step 4: Skirt 3 투입 후 Joint 3 Fit-up (J3 = FD)
 ```
-⬜ Skirt 1 ─ Joint 2 (FD) ─ 🟩 Skirt 2 (SD, Joint 3 = FDIDOD) ─ Joint 3 (FDIDOD) ─ 🟨 Skirt 3 ─ ...
+[Flange] ─ [J1: FD] ─ ⬜ S1 ─ [J2: FD] ─ ⬜ S2 (J2=FD, J3=FD) ─ [J3: FD] ─ ⬜ S3 (J3=FD, J4 없음) ─ ...
 ```
-- Skirt 1: Joint 2 = FD → 흰색 ✅
-- Skirt 2: Joint 3 = FDIDOD → 녹색 ✅
-- Skirt 3: Joint 4 없음 → 노란색 ✅
+- Skirt 1: 양쪽 FD → 흰색 ✅
+- Skirt 2: 양쪽 FD → 흰색 ✅
+- Skirt 3: 왼쪽 J3=FD, 오른쪽 J4 없음 → 흰색 ✅
 
-#### Step 5: Joint 2 Cir-seam 완료 (Joint 2 = FDIDOD)
+#### Step 5: Joint 2 Cir-seam 완료 (J2 = FDIDOD)
 ```
-🟩 Skirt 1 (SD, Joint 2 = FDIDOD) ─ Joint 2 (FDIDOD) ─ 🟩 Skirt 2 ─ Joint 3 (FDIDOD) ─ 🟨 Skirt 3 ─ ...
+[Flange] ─ [J1: FD] ─ ⬜ S1 (J1=FD, J2=FDIDOD) ─ [J2: FDIDOD] ─ 🟩 S2 (J2=FDIDOD, J3=FD) ─ [J3: FD] ─ ⬜ S3 ─ ...
 ```
-- Skirt 1: Joint 2 = FDIDOD → 녹색 ✅
-- Skirt 2: Joint 3 = FDIDOD → 녹색 ✅
-- Skirt 3: Joint 4 없음 → 노란색 ✅
+- Skirt 1: 왼쪽 J1=FD, 오른쪽 J2=FDIDOD → **녹색** ✅ (한쪽이라도 FDIDOD)
+- Skirt 2: 왼쪽 J2=FDIDOD → **녹색** ✅
+- Skirt 3: 양쪽 FD → 흰색 ✅
+
+#### Step 6: Joint 1 Cir-seam 완료 (J1 = FDIDOD)
+```
+[Flange] ─ [J1: FDIDOD] ─ 🟩 S1 (J1=FDIDOD, J2=FDIDOD) ─ [J2: FDIDOD] ─ 🟩 S2 ─ [J3: FD] ─ ⬜ S3 ─ ...
+```
+- Skirt 1: 양쪽 모두 FDIDOD → 녹색 ✅
+- Skirt 2: 왼쪽 FDIDOD → 녹색 ✅
+- Skirt 3: 양쪽 FD → 흰색 ✅
 
 ---
 
@@ -516,13 +531,15 @@ Skirt별 색상:
   sts: "S",
   skirt_qty: 11,
   mod: 1,
-  joint_status: [null, "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD"],
+  joint_status: ["FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD", "FDIDOD"],
   skirt_status: ["SD", "SD", "SD", "SD", "SD", "SD", "SD", "SD", "SD", "SD", "SD"]
 }
 ```
-- Joint 1: 없음 (null)
-- Joint 2~11: 모두 완료 (FDIDOD) → 모든 Skirt 녹색
+- Skirt 11개 → Joint 12개 ✅
+- Joint 1~12: 모두 완료 (FDIDOD)
+- 모든 Skirt: 완료 (SD)
 - 화살표: 'W' 없으므로 첫 번째 위치
+- 진행률 바: 모든 Skirt가 양쪽 Joint FDIDOD → 전체 녹색
 
 ### Gate 2 (G02)
 ```javascript
@@ -534,16 +551,17 @@ Skirt별 색상:
   sts: "R",
   skirt_qty: 11,
   mod: 1,
-  joint_status: [null, "FDOW", "FD", "FD", null, null, null, null, null, null, null],
+  joint_status: ["FDOW", "FD", "FD", null, null, null, null, null, null, null, null, null],
   skirt_status: ["SD", "SD", "SD", "SW|FU", "SN|LS", "SN|LS", "SN|LS", "SN|BN", "SN|BN", "SN|BN", "SN|BN"]
 }
 ```
-- Joint 2: FDOW (**W 포함!** → 화살표 여기 표시)
-- Joint 3~4: FD (Fit-up 완료)
-- Skirt 1: Joint 2 = FDOW (FD*) → 흰색
-- Skirt 2: Joint 3 = FD → 흰색
-- Skirt 3: Joint 4 = FD → 흰색
-- Skirt 4: Joint 5 없음, SW|FU → 노란색
+- Skirt 11개 → Joint 12개 (Joint 1~3만 데이터 있음)
+- Joint 1: FDOW (**W 포함!** → 화살표 여기 표시)
+- Joint 2~3: FD (Fit-up 완료)
+- Skirt 1: J1=FDOW, J2=FD → 흰색 (FD*)
+- Skirt 2: J2=FD, J3=FD → 흰색
+- Skirt 3: J3=FD, J4=null → 흰색 (한쪽이라도 FD)
+- Skirt 4: J4=null, J5=null, SW|FU → 노란색
 - Skirt 5~11: SN|* → 회색
 
 ### Gate 52 (G52) - Reverse 예시

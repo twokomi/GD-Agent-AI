@@ -166,10 +166,8 @@ class ExcelParser {
 
     // Rev_flag 처리 (Reverse일 때 Joint 배열 뒤집기)
     if (rev_flag === 1) {
-      // Joint 1은 없으므로 index 0 제외하고 reverse
-      const joints = jointStatuses.slice(1);
-      joints.reverse();
-      jointStatuses = [null, ...joints]; // index 0에 null 추가
+      // Reverse: 전체 Joint 배열 뒤집기
+      jointStatuses.reverse();
     }
 
     // Gate 객체 생성
