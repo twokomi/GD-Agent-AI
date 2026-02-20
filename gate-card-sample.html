@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gate Card Sample - G08</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .gate-card {
+            width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        /* Header Section - Gate Number with Arrow */
+        .gate-header {
+            background: linear-gradient(135deg, #2c4a5c 0%, #1e3a4a 100%);
+            border-radius: 12px 12px 0 0;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 2px solid #3a5f73;
+        }
+
+        .gate-timestamp {
+            color: #b0c4d0;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .gate-number-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .gate-number {
+            font-size: 64px;
+            font-weight: 900;
+            color: #ffffff;
+            letter-spacing: -2px;
+            line-height: 1;
+        }
+
+        .gate-arrow {
+            width: 80px;
+            height: 60px;
+            position: relative;
+        }
+
+        .gate-arrow::before {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-top: 30px solid transparent;
+            border-bottom: 30px solid transparent;
+            border-left: 40px solid #ffffff;
+        }
+
+        .gate-arrow::after {
+            content: '';
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 45px;
+            height: 20px;
+            background: #ffffff;
+        }
+
+        /* Section ID */
+        .section-id-container {
+            background: linear-gradient(135deg, #2c4a5c 0%, #1e3a4a 100%);
+            padding: 15px 20px;
+            border-left: 2px solid #3a5f73;
+            border-right: 2px solid #3a5f73;
+        }
+
+        .section-id-label {
+            color: #b0c4d0;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .section-id-value {
+            color: #ffffff;
+            font-size: 48px;
+            font-weight: 900;
+            letter-spacing: -1px;
+        }
+
+        /* Current Process - WAITING Section */
+        .current-process {
+            background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%);
+            padding: 20px;
+            border-left: 2px solid #3a5f73;
+            border-right: 2px solid #3a5f73;
+        }
+
+        .current-process-label {
+            color: #2c2c2c;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 12px;
+        }
+
+        .process-main {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .process-code {
+            color: #000000;
+            font-size: 36px;
+            font-weight: 900;
+        }
+
+        .waiting-status {
+            text-align: right;
+        }
+
+        .waiting-label {
+            color: #000000;
+            font-size: 42px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            line-height: 1;
+        }
+
+        .waiting-time {
+            color: #2c2c2c;
+            font-size: 16px;
+            font-weight: 700;
+            margin-top: 5px;
+        }
+
+        .time-range {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .time-label {
+            color: #000000;
+            font-size: 16px;
+            font-weight: 700;
+        }
+
+        .progress-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .progress-bar {
+            height: 14px;
+            background: #000000;
+            border-radius: 7px;
+            border: 2px solid #000000;
+        }
+
+        /* Progress & WIP Readiness Section */
+        .progress-section {
+            background: linear-gradient(135deg, #2c4a5c 0%, #1e3a4a 100%);
+            padding: 20px;
+            border-radius: 0 0 12px 12px;
+            border: 2px solid #3a5f73;
+        }
+
+        .progress-section-title {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        .wip-container {
+            position: relative;
+            display: flex;
+            gap: 8px;
+            padding-top: 30px;
+        }
+
+        .wip-arrow {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 25px solid #ffffff;
+        }
+
+        .wip-box {
+            flex: 1;
+            height: 80px;
+            background: #7a8a95;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="gate-card">
+        <!-- Gate Header with Arrow -->
+        <div class="gate-header">
+            <div class="gate-timestamp">2026/02/20 06:52AM</div>
+            <div class="gate-number-container">
+                <div class="gate-number">G08</div>
+                <div class="gate-arrow"></div>
+            </div>
+        </div>
+
+        <!-- Section ID -->
+        <div class="section-id-container">
+            <div class="section-id-label">SECTION ID</div>
+            <div class="section-id-value">VB094-M</div>
+        </div>
+
+        <!-- Current Process - WAITING -->
+        <div class="current-process">
+            <div class="current-process-label">CURRENT PROCESS</div>
+            <div class="process-main">
+                <div class="process-code">FU-C02</div>
+                <div class="waiting-status">
+                    <div class="waiting-label">WAITING</div>
+                    <div class="waiting-time">52 MINS WAITING</div>
+                </div>
+            </div>
+            <div class="time-range">
+                <div class="time-label">06:00 AM</div>
+                <div class="time-label">07:24 AM</div>
+            </div>
+            <div class="progress-bars">
+                <div class="progress-bar"></div>
+                <div class="progress-bar"></div>
+            </div>
+        </div>
+
+        <!-- Progress & WIP Readiness -->
+        <div class="progress-section">
+            <div class="progress-section-title">PROGRESS & WIP READINESS</div>
+            <div class="wip-container">
+                <div class="wip-arrow"></div>
+                <div class="wip-box"></div>
+                <div class="wip-box"></div>
+                <div class="wip-box"></div>
+                <div class="wip-box"></div>
+                <div class="wip-box"></div>
+                <div class="wip-box"></div>
+                <div class="wip-box"></div>
+                <div class="wip-box"></div>
+                <div class="wip-box"></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

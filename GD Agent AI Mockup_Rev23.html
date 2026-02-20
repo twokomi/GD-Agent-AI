@@ -1,0 +1,1767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GD Agent - Gate Dashboard (CS Wind AM)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f1419;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        /* Top Priority Bar */
+        .priority-bar {
+            background: #d63447;
+            padding: 8px 30px;
+            display: flex;
+            justify-content: flex-start;
+            gap: 40px;
+            align-items: center;
+            font-weight: 600;
+            font-size: 15px;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            border-radius: 0 0 12px 12px;
+            min-height: 50px;
+        }
+
+        .priority-carousel {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .priority-carousel:hover {
+            opacity: 0.9;
+        }
+
+        .priority-slide {
+            position: absolute;
+            width: 100%;
+            opacity: 0;
+            transform: translateX(30px);
+            transition: all 0.5s ease-in-out;
+            white-space: nowrap;
+            pointer-events: none;
+            font-size: 20px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .priority-slide.active {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+
+        .priority-slide.exit {
+            opacity: 0;
+            transform: translateX(-30px);
+        }
+
+        .carousel-indicators {
+            display: flex;
+            gap: 8px;
+            margin-left: 20px;
+            align-items: center;
+        }
+
+        .indicator-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .indicator-dot.active {
+            background: #ffffff;
+            width: 24px;
+            border-radius: 5px;
+        }
+
+        .indicator-dot:hover {
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        .freshness {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            margin-left: 20px;
+            white-space: nowrap;
+        }
+
+        /* Shift Summary Bar */
+        .shift-bar {
+            background: rgba(26, 35, 50, 0.95);
+            padding: 14px 30px;
+            display: flex;
+            justify-content: flex-start;
+            gap: 40px;
+            align-items: center;
+            font-size: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+            position: sticky;
+            top: 100px;
+            z-index: 999;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .shift-info {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .shift-label {
+            font-weight: 700;
+            color: #ffffff;
+            font-size: 15px;
+        }
+
+        .shift-time {
+            color: #7db9de;
+            font-size: 13px;
+            opacity: 0.9;
+            margin-right: 12px;
+        }
+
+        .current-time {
+            color: #ffffff;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 3px 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .gt-forecast {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .gt-count {
+            font-weight: 700;
+            color: #00ff88;
+            font-size: 16px;
+        }
+
+        .gt-progress-bar {
+            width: 120px;
+            height: 7px;
+            background: #2a3f4f;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            margin-left: 8px;
+        }
+
+        .gt-progress-fill {
+            height: 100%;
+            background: #00d988;
+            transition: width 0.5s ease;
+            border-radius: 4px;
+        }
+
+        .handover-info {
+            color: #ffb830;
+            font-size: 13px;
+            font-weight: 600;
+            display: none; /* Hidden */
+        }
+
+
+        /* Worker Shortage Bar */
+        .shortage-bar {
+            background: rgba(255, 149, 0, 0.15);
+            border-left: 4px solid #FF9500;
+            padding: 12px 30px;
+            display: flex;
+            justify-content: flex-start;
+            gap: 40px;
+            align-items: center;
+            font-size: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            position: sticky;
+            top: 50px;  /* Below priority bar */
+            z-index: 998;
+            margin-bottom: 0;
+        }
+
+        .shortage-title {
+            font-weight: 700;
+            color: #FF9500;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .shortage-stats {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+
+        .shortage-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .shortage-role {
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .shortage-count {
+            background: #FF9500;
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 16px;
+            padding: 4px 12px;
+            border-radius: 8px;
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .shortage-count.zero {
+            background: rgba(255,255,255,0.1);
+            color: #7db9de;
+        }
+
+        /* Mod Filter Bar */
+        .filter-bar {
+            background: rgba(20, 28, 40, 0.95);
+            padding: 16px 24px;
+            display: flex;
+            gap: 12px;
+            position: sticky;
+            top: 155px;  /* Below shift bar */
+            z-index: 998;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            border-radius: 0 0 16px 16px;
+        }
+
+        .filter-btn {
+            padding: 10px 24px;
+            border: none;
+            background: #243447;
+            color: #7db9de;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            font-size: 13px;
+        }
+
+        .filter-btn:hover {
+            background: #2d4159;
+            transform: translateY(-2px);
+            box-shadow: 0 3px 8px rgba(125, 185, 222, 0.15);
+        }
+
+        .filter-btn.active {
+            background: #ffffff;
+            color: #0f1419;
+            box-shadow: 0 3px 10px rgba(255, 255, 255, 0.25);
+        }
+
+        /* Main Container */
+        .container {
+            display: flex;
+            height: calc(100vh - 240px);
+            position: relative;
+        }
+
+        /* Gate Grid */
+        .gate-grid {
+            flex: 1;
+            padding: 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 20px;
+            overflow-y: auto;
+            align-content: start;
+            transition: margin-right 0.3s ease;
+        }
+
+        .gate-grid.panel-open {
+            margin-right: 380px;
+        }
+
+        /* Gate Card */
+        .gate-card {
+            background: #1e2f3f;
+            border-radius: 20px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            border: 3px solid transparent;
+        }
+
+        .gate-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Removed hover border for delay-critical cards */
+
+        /* Critical/Delayed Status - Red only */
+        .gate-card.delay-critical {
+            border-color: #d63447;
+            box-shadow: 0 3px 12px rgba(214, 52, 71, 0.3);
+            background: linear-gradient(135deg, #1e2f3f 0%, rgba(214, 52, 71, 0.06) 100%);
+        }
+
+        /* Status Indicator Dot */
+        .status-indicator {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            z-index: 10;
+        }
+
+        .status-indicator.critical {
+            background: #d63447;
+            box-shadow: 0 0 8px rgba(214, 52, 71, 0.5);
+        }
+
+        .gate-header {
+            display: flex;
+            justify-content: flex-start;
+            gap: 40px;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .gate-number {
+            font-size: 48px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1;
+        }
+
+        .mod-badge {
+            font-size: 13px;
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 8px;
+        }
+
+        .mod-badge.mod1 { 
+            background: rgba(52, 152, 219, 0.2);
+            color: #5dade2;
+            border: 1px solid #3498db;
+        }
+        .mod-badge.mod2 { 
+            background: rgba(0, 217, 136, 0.2);
+            color: #00ff88;
+            border: 1px solid #00d988;
+        }
+        .mod-badge.mod3 { 
+            background: rgba(230, 126, 34, 0.2);
+            color: #f39c12;
+            border: 1px solid #e67e22;
+        }
+
+        .alert-badge {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            z-index: 10;
+        }
+
+        .badge-count {
+            background: #d63447;
+            color: white;
+            font-size: 14px;
+            padding: 4px 10px;
+            border-radius: 14px;
+            font-weight: 700;
+            box-shadow: 0 2px 6px rgba(214, 52, 71, 0.3);
+        }
+
+        .section-id {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #e8f4f8;
+        }
+
+        .process-section {
+            margin-bottom: 12px;
+        }
+
+        .ongoing-process {
+            background: #1a3a2e;
+            color: #00ff88;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 13px;
+            margin-bottom: 6px;
+            border: 1px solid #00d988;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ongoing-label {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .ongoing-text {
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .progress-overlay {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: rgba(0, 255, 136, 0.15);
+            transition: width 0.3s ease;
+            border-radius: 12px 0 0 12px;
+        }
+
+        /* Status-based text colors (labels only) */
+        .ongoing-label.status-waiting,
+        .ongoing-text.status-waiting {
+            color: #FFC107;
+        }
+        
+        .ongoing-label.status-delayed,
+        .ongoing-text.status-delayed {
+            color: #F44336;
+        }
+        
+        .ongoing-label.status-qc-delayed,
+        .ongoing-text.status-qc-delayed {
+            color: #FF9800;
+        }
+        
+        .ongoing-label.status-normal,
+        .ongoing-text.status-normal {
+            color: #00ff88;
+        }
+        
+        /* Status-based progress overlay colors (filled bar only) */
+        .progress-overlay.status-normal {
+            background: rgba(0, 255, 136, 0.15);
+        }
+        
+        .progress-overlay.status-waiting {
+            background: rgba(255, 193, 7, 0.25);
+        }
+        
+        .progress-overlay.status-delayed {
+            background: rgba(244, 67, 54, 0.25);
+        }
+        
+        .progress-overlay.status-qc-delayed {
+            background: rgba(255, 152, 0, 0.25);
+        }
+
+
+        .next-process {
+            background: rgba(125, 185, 222, 0.1);
+            color: #7db9de;
+            padding: 8px 14px;
+            border-radius: 12px;
+            font-size: 11px;
+            border: 1px solid rgba(125, 185, 222, 0.3);
+            position: relative;
+        }
+
+        .next-label {
+            font-size: 10px;
+            opacity: 0.7;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .next-text {
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        /* Assignment indicator on Next process */
+        .assignment-indicator {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 60%;
+            border-radius: 2px;
+        }
+
+        .assignment-indicator.assigned {
+            background: #00ff88;
+            box-shadow: 0 0 6px rgba(0, 255, 136, 0.4);
+        }
+
+        .assignment-indicator.unassigned {
+            background: #d63447;
+            box-shadow: 0 0 6px rgba(214, 52, 71, 0.4);
+        }
+
+        .delay-info {
+            font-size: 13px;
+            color: #d63447;
+            margin-bottom: 10px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .delay-info .delay-value {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .progress-bars {
+            display: flex;
+            gap: 4px;
+            height: 32px;
+            margin-top: 12px;
+            width: 100%;
+        }
+
+        .progress-bar {
+            flex: 0 0 calc((100% - 40px) / 11); /* Fixed 11-slot spacing */
+            background: #00d988;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 1px 2px rgba(0, 217, 136, 0.12);
+        }
+
+        .progress-bar.empty {
+            background: #2a3f4f;
+            border: 1px solid #3a4f5f;
+            box-shadow: none;
+        }
+
+        /* Right Side Panel */
+        .side-panel {
+            position: fixed;
+            right: -420px;
+            top: 206px;
+            width: 380px;
+            height: calc(100vh - 240px);
+            background: #1a2332;
+            box-shadow: -4px 0 15px rgba(0,0,0,0.4);
+            transition: right 0.3s ease;
+            z-index: 1001;
+            overflow-y: auto;
+            padding: 24px;
+            border-radius: 24px 0 0 0;
+        }
+
+        .side-panel.open {
+            right: 0;
+        }
+
+        .panel-header {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.4);
+            color: #e8f4f8;
+        }
+
+        .close-btn {
+            float: right;
+            background: #d63447;
+            border: none;
+            color: #ffffff;
+            font-size: 24px;
+            cursor: pointer;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .close-btn:hover {
+            background: #ff4757;
+            transform: rotate(90deg);
+        }
+
+        .comment-box {
+            background: rgba(255,255,255,0.05);
+            padding: 14px 16px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid #ffffff;
+            font-size: 15px;
+            line-height: 1.6;
+            transition: all 0.3s ease;
+        }
+
+        .comment-box:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateX(4px);
+        }
+
+        .comment-box.urgent {
+            border-left-color: #d63447;
+            background: rgba(214, 52, 71, 0.08);
+        }
+
+        .comment-box.warning {
+            border-left-color: #ffb830;
+            background: rgba(255, 184, 48, 0.08);
+        }
+
+        .comment-box.info {
+            border-left-color: #5dade2;
+            background: rgba(52, 152, 219, 0.08);
+        }
+
+        .comment-icon {
+            font-size: 18px;
+            margin-right: 6px;
+        }
+
+        .remaining-steps {
+            background: rgba(0,0,0,0.3);
+            padding: 16px;
+            border-radius: 16px;
+            margin-top: 16px;
+            font-size: 14px;
+            border: 1px solid #2a3f4f;
+            line-height: 1.8;
+        }
+
+        .section-title {
+            font-weight: 700;
+            color: #ffffff;
+            margin-bottom: 12px;
+            margin-top: 20px;
+            font-size: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .section-title:first-child {
+            margin-top: 0;
+        }
+
+        .crew-needs {
+            background: rgba(255, 255, 255, 0.04);
+            padding: 14px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid #ffffff;
+        }
+
+        .crew-needs-list {
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: #e8f4f8;
+        }
+
+        .crew-item {
+            font-weight: 600;
+        }
+
+        .crew-count {
+            color: #00ff88;
+            font-weight: 700;
+        }
+
+        .insights-section {
+            background: rgba(0,0,0,0.3);
+            padding: 14px;
+            border-radius: 16px;
+            margin-bottom: 12px;
+            border: 1px solid #2a3f4f;
+        }
+
+        .insights-title {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #ffb830;
+        }
+
+        .insight-item {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #e8f4f8;
+            margin-bottom: 6px;
+            padding-left: 8px;
+            border-left: 2px solid #ffb830;
+        }
+
+        .priority-number {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            width: 28px;
+            height: 28px;
+            background: #d63447;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            z-index: 12;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+        }
+
+        .update-time {
+            margin-top: 16px;
+            font-size: 12px;
+            color: #7db9de;
+            text-align: center;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0f1419;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ffffff;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00b8d4;
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Priority Bar with Carousel -->
+    <div class="priority-bar">
+        <div class="priority-carousel" id="priorityCarousel" onclick="handleCarouselClick()">
+            <!-- Slides will be dynamically inserted here -->
+        </div>
+        <div class="carousel-indicators" id="carouselIndicators"></div>
+        <div class="freshness" id="freshnessIndicator">
+            <span>Data Updated: <span id="updateTime">3min ago</span></span>
+            <span id="freshnessIcon">✔️</span>
+        </div>
+    </div>
+
+    <!-- Worker Shortage Bar -->
+    <div class="shortage-bar">
+        <div class="shortage-title">
+            ⚠️ WORKER SHORTAGE
+        </div>
+        <div class="shortage-stats">
+            <div class="shortage-item">
+                <span class="shortage-role">SAW:</span>
+                <span class="shortage-count" id="shortSAW">0</span>
+            </div>
+            <div class="shortage-item">
+                <span class="shortage-role">UT:</span>
+                <span class="shortage-count" id="shortUT">0</span>
+            </div>
+            <div class="shortage-item">
+                <span class="shortage-role">Repair:</span>
+                <span class="shortage-count" id="shortRepair">0</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shift Summary Bar -->
+    <div class="shift-bar">
+        <div class="shift-info">
+            <div>
+                <span class="shift-label" id="shiftLabel">Day Shift</span>
+                <span class="shift-time" id="shiftTime">06:00 - 18:00</span>
+                <span class="current-time" id="currentTime">14:35</span>
+            </div>
+            <div class="gt-forecast">
+                <span style="color: #7db9de; font-size: 12px;">Today GT:</span>
+                <span class="gt-count" id="gtCompleted">3</span>
+                <span style="color: #7db9de; font-size: 13px;">/</span>
+                <span style="color: #7db9de; font-size: 14px;" id="gtExpected">7</span>
+                <div class="gt-progress-bar">
+                    <div class="gt-progress-fill" id="todayProgressFill" style="width: 43%;"></div>
+                </div>
+            </div>
+            <div class="gt-forecast">
+                <span style="color: #ffb830; font-size: 12px;">Weekly:</span>
+                <span style="color: #00ff88; font-weight: 700; font-size: 15px;" id="weeklyCompleted">12</span>
+                <span style="color: #7db9de; font-size: 13px;">/</span>
+                <span style="color: #7db9de; font-size: 14px;" id="weeklyTarget">14</span>
+                <div class="gt-progress-bar">
+                    <div class="gt-progress-fill" id="weeklyProgressFill" style="width: 86%;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mod Filter Bar -->
+    <div class="filter-bar">
+        <button class="filter-btn active" onclick="filterMod('all')">All Gates (60)</button>
+        <button class="filter-btn" onclick="filterMod(1)">Mod 1 (G1-G20)</button>
+        <button class="filter-btn" onclick="filterMod(2)">Mod 2 (G21-G40)</button>
+        <button class="filter-btn" onclick="filterMod(3)">Mod 3 (G41-G60)</button>
+    </div>
+
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Gate Grid -->
+        <div class="gate-grid" id="gateGrid"></div>
+
+        <!-- Right Side Panel -->
+        <div class="side-panel" id="sidePanel">
+            <button class="close-btn" onclick="closePanel()">×</button>
+            <div class="panel-header" id="panelHeader">Gate 51 | Mod 3 | VB095-T</div>
+            <div id="panelContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // Process sequence based on production flow
+        const PROCESS_FLOW = [
+            'LW',
+            'FU-02', 'FU-03', 'FU-04', 'FU-05', 'FU-06', 'FU-07', 'FU-08', 'FU-09', 'FU-10', 'FU-11',
+            'CSO-02', 'CSO-03', 'CSO-04', 'CSO-05', 'CSO-06', 'CSO-07', 'CSO-08', 'CSO-09', 'CSO-10', 'CSO-11',
+            'CSI-02', 'CSI-03', 'CSI-04', 'CSI-05', 'CSI-06', 'CSI-07', 'CSI-08', 'CSI-09', 'CSI-10', 'CSI-11',
+            'QC VTMT',
+            'QC UT',
+            'VT/MT Repair',
+            'UT Repair',
+            'Flatness Inspection',
+            'Final Inspection'
+        ];
+
+        // Get skirt count based on section type
+        function getSkirtCount(sectionType) {
+            // Removed B (Bottom - 5 skirts)
+            if (sectionType === 'L') return 9;  // Low
+            if (sectionType === 'T' || sectionType === 'U') return 11; // Top/Upper
+            return 9; // Default
+        }
+
+        // Get valid processes for section type
+        function getValidProcesses(sectionType) {
+            const skirtCount = getSkirtCount(sectionType);
+            const jointCount = skirtCount - 1;
+            
+            const processes = ['LW'];
+            
+            // Add Fit-up joints
+            for (let i = 2; i <= jointCount + 1; i++) {
+                processes.push(`FU-${String(i).padStart(2, '0')}`);
+            }
+            
+            // Add CW outside joints
+            for (let i = 2; i <= jointCount + 1; i++) {
+                processes.push(`CSO-${String(i).padStart(2, '0')}`);
+            }
+            
+            // Add CW inside joints
+            for (let i = 2; i <= jointCount + 1; i++) {
+                processes.push(`CSI-${String(i).padStart(2, '0')}`);
+            }
+            
+            // Add inspection processes
+            processes.push('QC VTMT', 'QC UT', 'VT/MT Repair', 'UT Repair', 'Flatness Inspection', 'Final Inspection');
+            
+            return processes;
+        }
+
+        // Get next process in sequence
+        function getNextProcess(currentProcess, sectionType) {
+            const validProcesses = getValidProcesses(sectionType);
+            const currentIndex = validProcesses.indexOf(currentProcess);
+            
+            if (currentIndex === -1 || currentIndex === validProcesses.length - 1) {
+                return 'Release';
+            }
+            
+            return validProcesses[currentIndex + 1];
+        }
+
+        // Get remaining steps
+        function getRemainingSteps(currentProcess, sectionType) {
+            const validProcesses = getValidProcesses(sectionType);
+            const currentIndex = validProcesses.indexOf(currentProcess);
+            
+            if (currentIndex === -1) return [];
+            
+            return validProcesses.slice(currentIndex + 1);
+        }
+
+        // Sample Gate Data
+        let gatesData = [];
+        let priorityAlerts = [];
+        let currentSlide = 0;
+        let carouselInterval;
+        let isCarouselPaused = false;
+        
+        function initializeData() {
+            const sections = ['T', 'U', 'L']; // Removed 'B' (Bottom)
+            
+            // Calculate target: 25% with delay (15 gates), 9-12 unassigned across all mods
+            const delayTargets = 15;
+            const unassignedTargets = 10;
+            
+            // Create delay indices (random 15 gates)
+            const delayIndices = new Set();
+            while (delayIndices.size < delayTargets) {
+                delayIndices.add(Math.floor(Math.random() * 60) + 1);
+            }
+            
+            // Create unassigned indices - MUST overlap with some delay gates
+            const unassignedIndices = new Set();
+            const delayArray = Array.from(delayIndices);
+            
+            // First: pick 5-7 gates from delay gates to be unassigned (OVERLAP - GUARANTEED)
+            const overlapCount = Math.floor(Math.random() * 3) + 5; // 5-7 gates
+            // Shuffle delay array to pick unique gates
+            const shuffled = delayArray.sort(() => Math.random() - 0.5);
+            for (let i = 0; i < overlapCount && i < shuffled.length; i++) {
+                unassignedIndices.add(shuffled[i]);
+            }
+            console.log('✅ Guaranteed overlap count:', unassignedIndices.size, 'gates');
+            
+            // Then: add 3-5 more random unassigned gates (without delay)
+            const remainingUnassigned = unassignedTargets - unassignedIndices.size;
+            let attempts = 0;
+            while (unassignedIndices.size < unassignedTargets && attempts < 100) {
+                const randomGate = Math.floor(Math.random() * 60) + 1;
+                if (!delayIndices.has(randomGate)) {
+                    unassignedIndices.add(randomGate);
+                }
+                attempts++;
+            }
+            
+            for (let i = 1; i <= 60; i++) {
+                const mod = Math.ceil(i / 20);
+                const section = sections[Math.floor(Math.random() * sections.length)];
+                const sectionId = `VG${String(i).padStart(3, '0')}-${section}`;
+
+                // Assign status based on mod and position
+                const gateInMod = ((i - 1) % 20) + 1;
+                let gateStatus = 'normal';
+                
+                if (mod === 1) {
+                    // Mod 1: 6 waiting, 5 delayed, 3 qc-delayed, 6 normal
+                    if (gateInMod <= 6) gateStatus = 'waiting';
+                    else if (gateInMod <= 11) gateStatus = 'delayed';
+                    else if (gateInMod <= 14) gateStatus = 'qc-delayed';
+                    else gateStatus = 'normal';
+                } else if (mod === 2) {
+                    // Mod 2: 9 waiting, 3 delayed, 1 qc-delayed, 7 normal
+                    if (gateInMod <= 9) gateStatus = 'waiting';
+                    else if (gateInMod <= 12) gateStatus = 'delayed';
+                    else if (gateInMod === 13) gateStatus = 'qc-delayed';
+                    else gateStatus = 'normal';
+                } else if (mod === 3) {
+                    // Mod 3: 12 waiting, 2 delayed, 0 qc-delayed, 6 normal
+                    if (gateInMod <= 12) gateStatus = 'waiting';
+                    else if (gateInMod <= 14) gateStatus = 'delayed';
+                    else gateStatus = 'normal';
+                }
+                
+
+                
+                const validProcesses = getValidProcesses(section);
+                const processIndex = Math.floor(Math.random() * (validProcesses.length - 2)); // Not last 2
+                const currentProcess = validProcesses[processIndex];
+                
+                const hasDelay = delayIndices.has(i);
+                const delay = hasDelay ? Math.floor(Math.random() * 120) + 60 : Math.floor(Math.random() * 50);
+                
+                const nextProcess = getNextProcess(currentProcess, section);
+                const isAssigned = !unassignedIndices.has(i);
+                
+                const progress = Math.floor((processIndex / validProcesses.length) * 10) + 1;
+                const remainingSteps = getRemainingSteps(currentProcess, section);
+                
+                // Generate comments
+                const comments = [];
+                if (hasDelay) {
+                    comments.push({
+                        type: 'urgent',
+                        icon: '⚠️',
+                        text: `CRITICAL: Delay ${delay}min | ${currentProcess} → ${
+                            delay >= 120 ? 'Urgent: Assign crew & prioritize immediately' :
+                            delay >= 90 ? 'Action needed: Check equipment & worker allocation' :
+                            'Monitor closely: May need intervention'
+                        }`
+                    });
+                }
+                
+                if (!isAssigned) {
+                    comments.push({
+                        type: 'warning',
+                        icon: '📌',
+                        text: `Worker not assigned for ${nextProcess} → Assignment required`
+                    });
+                }
+                
+                // Role recommendations based on process
+                if (currentProcess.startsWith('FU-') || currentProcess.startsWith('CSO-') || currentProcess.startsWith('CSI-')) {
+                    comments.push({
+                        type: 'info',
+                        icon: '👤',
+                        text: `SAW crew allocation recommended for ${currentProcess}`
+                    });
+                } else if (currentProcess.includes('QC') || currentProcess.includes('Inspection')) {
+                    comments.push({
+                        type: 'info',
+                        icon: '👤',
+                        text: `QC Inspector assignment needed for ${currentProcess}`
+                    });
+                } else if (currentProcess.includes('Repair')) {
+                    comments.push({
+                        type: 'info',
+                        icon: '👤',
+                        text: `Repair crew immediate deployment required`
+                    });
+                }
+                
+                gatesData.push({
+                    gate: i,
+                    mod: mod,
+                    sectionId: sectionId,
+                    sectionType: section,
+                    process: currentProcess,
+                    nextProcess: nextProcess,
+                    isAssigned: isAssigned,
+                    delay: delay,
+                    progress: progress,
+                    status: gateStatus,
+                    comments: comments,
+                    remainingSteps: remainingSteps
+                });
+            }
+            
+            generatePriorityAlerts();
+        }
+
+        function generatePriorityAlerts() {
+            priorityAlerts = [];
+            
+            const urgentGates = gatesData
+                .filter(g => g.delay >= 60)
+                .sort((a, b) => b.delay - a.delay)
+                .slice(0, 5);
+            
+            urgentGates.forEach(gate => {
+                const icon = '🚨';
+                const urgency = 'CRITICAL';
+                priorityAlerts.push({
+                    gateId: gate.gate,
+                    text: `${icon} ${urgency}: G${gate.gate} Mod${gate.mod} | ${gate.sectionId} | Delay ${gate.delay}min | ${gate.process} → Action Required`,
+                    gate: gate
+                });
+            });
+            
+            if (priorityAlerts.length === 0) {
+                priorityAlerts.push({
+                    gateId: null,
+                    text: '✔️ All Gates Operating Normally | No Critical Alerts',
+                    gate: null
+                });
+            }
+            
+            initializeCarousel();
+        }
+
+        function initializeCarousel() {
+            const carousel = document.getElementById('priorityCarousel');
+            const indicators = document.getElementById('carouselIndicators');
+            
+            carousel.innerHTML = '';
+            indicators.innerHTML = '';
+            
+            priorityAlerts.forEach((alert, index) => {
+                const slide = document.createElement('div');
+                slide.className = `priority-slide ${index === 0 ? 'active' : ''}`;
+                slide.textContent = alert.text;
+                slide.dataset.gateId = alert.gateId;
+                carousel.appendChild(slide);
+                
+                const dot = document.createElement('div');
+                dot.className = `indicator-dot ${index === 0 ? 'active' : ''}`;
+                dot.onclick = (e) => {
+                    e.stopPropagation();
+                    goToSlide(index);
+                };
+                indicators.appendChild(dot);
+            });
+            
+            startCarousel();
+            updateShortageDisplay('all'); // Update after data is initialized
+        }
+
+        function startCarousel() {
+            if (carouselInterval) clearInterval(carouselInterval);
+            
+            carouselInterval = setInterval(() => {
+                if (!isCarouselPaused) {
+                    nextSlide();
+                }
+            }, 3000);
+        }
+
+        function nextSlide() {
+            const slides = document.querySelectorAll('.priority-slide');
+            const dots = document.querySelectorAll('.indicator-dot');
+            
+            slides[currentSlide].classList.remove('active');
+            slides[currentSlide].classList.add('exit');
+            dots[currentSlide].classList.remove('active');
+            
+            currentSlide = (currentSlide + 1) % priorityAlerts.length;
+            
+            setTimeout(() => {
+                slides.forEach(s => s.classList.remove('exit'));
+                slides[currentSlide].classList.add('active');
+                dots[currentSlide].classList.add('active');
+            }, 100);
+        }
+
+        function goToSlide(index) {
+            const slides = document.querySelectorAll('.priority-slide');
+            const dots = document.querySelectorAll('.indicator-dot');
+            
+            slides[currentSlide].classList.remove('active');
+            dots[currentSlide].classList.remove('active');
+            
+            currentSlide = index;
+            
+            slides[currentSlide].classList.add('active');
+            dots[currentSlide].classList.add('active');
+        }
+
+        function handleCarouselClick() {
+            const alert = priorityAlerts[currentSlide];
+            if (alert.gate) {
+                openPanel(alert.gate);
+                const card = document.querySelector(`[data-gate="${alert.gateId}"]`);
+                if (card) {
+                    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const carousel = document.getElementById('priorityCarousel');
+            carousel.addEventListener('mouseenter', () => {
+                isCarouselPaused = true;
+            });
+            carousel.addEventListener('mouseleave', () => {
+                isCarouselPaused = false;
+            });
+        });
+
+
+        // Update Worker Shortage display
+        function updateShortageDisplay(filterMod) {
+            const modLabel = filterMod === 'all' || filterMod === undefined ? 'ALL' : `Mod ${filterMod}`;
+            console.log('🔧 updateShortageDisplay called for', modLabel);
+            console.log('   gatesData.length:', gatesData.length);
+            
+            const needs = calculateCrewNeeds(filterMod);
+            
+            console.log('   Calculated needs:', needs);
+            console.log('   SAW:', needs.saw, 'UT:', needs.ut, 'Repair:', needs.repair);
+            
+            const sawEl = document.getElementById('shortSAW');
+            const utEl = document.getElementById('shortUT');
+            const repairEl = document.getElementById('shortRepair');
+            
+            console.log('   Elements found:', sawEl ? 'SAW✓' : 'SAW✗', utEl ? 'UT✓' : 'UT✗', repairEl ? 'Repair✓' : 'Repair✗');
+            
+            if (sawEl) sawEl.textContent = needs.saw;
+            if (utEl) utEl.textContent = needs.ut;
+            if (repairEl) repairEl.textContent = needs.repair;
+            
+            // Add 'zero' class if count is 0
+            if (sawEl) sawEl.classList.toggle('zero', needs.saw === 0);
+            if (utEl) utEl.classList.toggle('zero', needs.ut === 0);
+            if (repairEl) repairEl.classList.toggle('zero', needs.repair === 0);
+            
+            console.log('✅ updateShortageDisplay complete');
+        }
+
+        function renderGateCards(filterMod = 'all') {
+            const grid = document.getElementById('gateGrid');
+            grid.innerHTML = '';
+            
+            const filteredGates = filterMod === 'all' 
+                ? gatesData 
+                : gatesData.filter(g => g.mod === filterMod);
+            
+            filteredGates.forEach(gate => {
+                const card = document.createElement('div');
+                card.className = 'gate-card';
+                card.dataset.gate = gate.gate;
+                
+                let statusIndicator = '';
+                
+                // Calculate priority number first
+                let priorityNumber = '';
+                const priority = calculatePriority(gate, filteredGates);
+                if (priority <= 3) {
+                    priorityNumber = `<div class="priority-number">${priority}</div>`;
+                }
+                
+                // Only show status indicator if no priority number
+                if (gate.delay >= 60) {
+                    card.classList.add('delay-critical');
+                    if (!priorityNumber) {
+                        statusIndicator = '<div class="status-indicator critical"></div>';
+                    }
+                }
+                
+                card.onclick = () => openPanel(gate);
+                
+                // Fixed 11-bar display (regardless of actual skirt count)
+                const FIXED_BAR_COUNT = 11;
+                const skirtCount = getSkirtCount(gate.sectionType);
+                const actualJoints = skirtCount - 1;
+                
+                let progressBars = '';
+                for (let i = 0; i < FIXED_BAR_COUNT; i++) {
+                    // Show filled bars based on actual progress, rest are empty
+                    const barClass = i >= actualJoints ? 'empty' : (i >= gate.progress ? 'empty' : '');
+                    progressBars += `<div class="progress-bar ${barClass}"></div>`;
+                }
+                
+                const progressPercent = (gate.progress / actualJoints) * 100;
+                
+                const assignmentIndicator = gate.isAssigned 
+                    ? '<div class="assignment-indicator assigned"></div>'
+                    : '<div class="assignment-indicator unassigned"></div>';
+                
+                // Priority number already calculated above
+                
+                let alertBadge = ''; // Removed - no longer needed
+                
+                card.innerHTML = `
+                    ${statusIndicator}
+                    ${priorityNumber}
+                    <div class="gate-header">
+                        <div>
+                            <div class="mod-badge mod${gate.mod}">M${gate.mod}</div>
+                            <div class="gate-number">G${gate.gate}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="section-id">${gate.sectionId}</div>
+                    <div class="process-section">
+                        <div class="ongoing-process">
+                            <div class="progress-overlay status-${gate.status}" style="width: ${gate.status === 'waiting' ? '0' : progressPercent}%"></div>
+                            <div style="position: relative; z-index: 1;">
+                                <div class="ongoing-label status-${gate.status}">${
+                                    gate.status === 'waiting' ? 'WAITING' :
+                                    gate.status === 'delayed' ? 'DELAYED' :
+                                    gate.status === 'qc-delayed' ? 'QC WAITING' :
+                                    'ONGOING'
+                                }</div>
+                                <div class="ongoing-text status-${gate.status}">${gate.process}</div>
+                            </div>
+                        </div>
+                        <div class="next-process">
+                            <div class="next-label">Next</div>
+                            <div class="next-text">${gate.nextProcess}</div>
+                            ${assignmentIndicator}
+                        </div>
+                    </div>
+                    ${gate.delay > 0 ? `<div class="delay-info">⚠️ Delay: <span class="delay-value">${gate.delay}min</span></div>` : ''}
+                    <div class="progress-bars">${progressBars}</div>
+                `;
+                
+                grid.appendChild(card);
+            });
+            updateShortageDisplay(filterMod);
+        }
+
+        
+        // Group consecutive CW processes
+        function groupCWProcesses(steps) {
+            const grouped = [];
+            let i = 0;
+            
+            while (i < steps.length) {
+                const step = steps[i];
+                
+                // Check if it's CSO or CSI
+                if (step.startsWith('CSO-') || step.startsWith('CSI-')) {
+                    const prefix = step.substring(0, 3); // 'CSO' or 'CSI'
+                    const startNum = parseInt(step.substring(4));
+                    let endNum = startNum;
+                    let j = i + 1;
+                    
+                    // Find consecutive numbers
+                    while (j < steps.length && steps[j].startsWith(prefix + '-')) {
+                        const nextNum = parseInt(steps[j].substring(4));
+                        if (nextNum === endNum + 1) {
+                            endNum = nextNum;
+                            j++;
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    // Group if more than 2 consecutive
+                    if (endNum - startNum >= 2) {
+                        grouped.push(`${prefix} (${String(startNum).padStart(2, '0')}~${String(endNum).padStart(2, '0')})`);
+                        i = j;
+                    } else {
+                        grouped.push(step);
+                        i++;
+                    }
+                } else if (step.startsWith('FU-')) {
+                    // Same for FU
+                    const prefix = 'FU';
+                    const startNum = parseInt(step.substring(3));
+                    let endNum = startNum;
+                    let j = i + 1;
+                    
+                    while (j < steps.length && steps[j].startsWith('FU-')) {
+                        const nextNum = parseInt(steps[j].substring(3));
+                        if (nextNum === endNum + 1) {
+                            endNum = nextNum;
+                            j++;
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    if (endNum - startNum >= 2) {
+                        grouped.push(`FU (${String(startNum).padStart(2, '0')}~${String(endNum).padStart(2, '0')})`);
+                        i = j;
+                    } else {
+                        grouped.push(step);
+                        i++;
+                    }
+                } else {
+                    grouped.push(step);
+                    i++;
+                }
+            }
+            
+            return grouped;
+        }
+
+        function openPanel(gate) {
+            const panel = document.getElementById('sidePanel');
+            const header = document.getElementById('panelHeader');
+            const content = document.getElementById('panelContent');
+            const grid = document.getElementById('gateGrid');
+            
+            header.textContent = `Gate ${gate.gate} | Mod ${gate.mod} | ${gate.sectionId}`;
+            
+            let commentsHtml = '';
+            gate.comments.forEach(comment => {
+                commentsHtml += `
+                    <div class="comment-box ${comment.type}">
+                        <span class="comment-icon">${comment.icon}</span>
+                        ${comment.text}
+                    </div>
+                `;
+            });
+            
+            if (gate.comments.length === 0) {
+                commentsHtml = '<div class="comment-box">✔️ Normal operation | No issues detected</div>';
+            }
+            
+            const remainingStepsHtml = gate.remainingSteps.length > 0
+                ? `<div class="remaining-steps">
+                    <strong>Remaining Steps:</strong><br>
+                    ${groupCWProcesses(gate.remainingSteps).join(' → ')}
+                   </div>`
+                : '<div class="remaining-steps"><strong>Status:</strong> Ready for Release ✔️</div>';
+            
+            // Worker shortage moved to top bar - no longer in right panel
+            
+            // Generate insights for this specific mod
+            const insights = generateInsights(gate.mod);
+            let insightsHtml = '';
+            if (insights.length > 0) {
+                insights.forEach(insight => {
+                    insightsHtml += `
+                        <div class="insights-section">
+                            <div class="insights-title">${insight.title}</div>
+                            <div class="insight-item">${insight.text}</div>
+                        </div>
+                    `;
+                });
+            }
+            
+            content.innerHTML = `
+                <div class="section-title">📝 ALERTS & RECOMMENDATIONS</div>
+                ${commentsHtml}
+                
+                ${remainingStepsHtml}
+                
+                ${insightsHtml ? '<div class="section-title">📊 MODULE INSIGHTS</div>' + insightsHtml : ''}
+                
+                <div class="update-time">Last Updated: ${new Date().toLocaleTimeString('en-US', { hour12: true })}</div>
+            `;
+            
+            panel.classList.add('open');
+            grid.classList.add('panel-open');
+        }
+
+        function closePanel() {
+            const panel = document.getElementById('sidePanel');
+            const grid = document.getElementById('gateGrid');
+            panel.classList.remove('open');
+            grid.classList.remove('panel-open');
+        }
+
+        function filterMod(mod) {
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            updatePriorityBar(mod);
+            renderGateCards(mod);
+            closePanel();
+        }
+        
+        function updatePriorityBar(filterMod) {
+            // Fixed values as requested by user
+            let completed, expected, weeklyCompleted, weeklyTarget;
+            
+            if (filterMod === 'all') {
+                // All gates - Today GT: 5/15, Weekly: 27/80
+                completed = 5;
+                expected = 15;
+                weeklyCompleted = 27;
+                weeklyTarget = 80;
+            } else if (filterMod === 1) {
+                // Mod 1 - Today GT: 2/5, Weekly: 12/28
+                completed = 2;
+                expected = 5;
+                weeklyCompleted = 12;
+                weeklyTarget = 28;
+            } else if (filterMod === 2) {
+                // Mod 2 - Today GT: 1/5, Weekly: 14/28
+                completed = 1;
+                expected = 5;
+                weeklyCompleted = 14;
+                weeklyTarget = 28;
+            } else if (filterMod === 3) {
+                // Mod 3 - Today GT: 2/5, Weekly: 11/24
+                completed = 2;
+                expected = 5;
+                weeklyCompleted = 11;
+                weeklyTarget = 24;
+            }
+            
+            const todayPercent = Math.round((completed / expected) * 100);
+            const weeklyPercent = Math.round((weeklyCompleted / weeklyTarget) * 100);
+            
+            // Update DOM
+            document.getElementById('gtCompleted').textContent = completed;
+            document.getElementById('gtExpected').textContent = expected;
+            document.getElementById('todayProgressFill').style.width = todayPercent + '%';
+            
+            document.getElementById('weeklyCompleted').textContent = weeklyCompleted;
+            document.getElementById('weeklyTarget').textContent = weeklyTarget;
+            document.getElementById('weeklyProgressFill').style.width = weeklyPercent + '%';
+        }
+
+        let minutesElapsed = 3;
+        
+        // Calculate priority for gate
+        function calculatePriority(gate, allGates) {
+            // Calculate priority within the same MOD
+            const modGates = allGates.filter(g => g.mod === gate.mod);
+            
+            // Score calculation
+            let score = 0;
+            
+            // Delay weight (higher delay = higher priority)
+            if (gate.delay >= 120) score += 100;
+            else if (gate.delay >= 60) score += 50;
+            else if (gate.delay >= 30) score += 20;
+            
+            // Worker not assigned
+            if (!gate.isAssigned) score += 30;
+            
+            // Process type priority
+            if (gate.process.includes('QC') || gate.process.includes('Repair')) {
+                score += 25; // Critical processes
+            } else if (gate.process.startsWith('CSI-')) {
+                score += 15; // Near completion
+            }
+            
+            // Remaining steps (fewer = higher priority)
+            if (gate.remainingSteps.length <= 2) score += 20;
+            else if (gate.remainingSteps.length <= 5) score += 10;
+            
+            // Calculate gate's rank within its MOD
+            const modScores = modGates.map(g => {
+                let s = 0;
+                if (g.delay >= 120) s += 100;
+                else if (g.delay >= 60) s += 50;
+                else if (g.delay >= 30) s += 20;
+                if (!g.isAssigned) s += 30;
+                if (g.process.includes('QC') || g.process.includes('Repair')) s += 25;
+                else if (g.process.startsWith('CSI-')) s += 15;
+                if (g.remainingSteps.length <= 2) s += 20;
+                else if (g.remainingSteps.length <= 5) s += 10;
+                return { gate: g.gate, score: s };
+            }).sort((a, b) => b.score - a.score);
+            
+            // Find this gate's rank
+            const rank = modScores.findIndex(item => item.gate === gate.gate) + 1;
+            
+            // Only show priority 1-5 within each MOD
+            if (rank <= 5 && score >= 40) { // Minimum threshold
+                return rank;
+            }
+            
+            return 99; // No priority
+        }
+        
+        // Calculate crew needs (ONLY unassigned + delay ≥ 60min)
+        function calculateCrewNeeds(filterMod) {
+            const needs = { saw: 0, ut: 0, repair: 0 };
+            
+            // Determine which gates to check
+            let targetGates;
+            let modLabel;
+            
+            if (filterMod === 'all' || filterMod === undefined) {
+                targetGates = gatesData;
+                modLabel = 'ALL';
+            } else {
+                targetGates = gatesData.filter(g => g.mod === filterMod);
+                modLabel = `Mod ${filterMod}`;
+            }
+            
+            console.log('📊 calculateCrewNeeds - checking', targetGates.length, 'gates for', modLabel);
+            let matchCount = 0;
+            
+            targetGates.forEach(gate => {
+                // Only count if: NOT assigned AND delay >= 60 minutes
+                if (!gate.isAssigned && gate.delay >= 60) {
+                    matchCount++;
+                    console.log('   Match:', gate.gate, 'delay:', gate.delay, 'next:', gate.nextProcess);
+                    
+                    if (gate.nextProcess.startsWith('FU-') || gate.nextProcess.startsWith('CSO-') || gate.nextProcess.startsWith('CSI-')) {
+                        needs.saw++;
+                    } else if (gate.nextProcess.includes('QC') || gate.nextProcess.includes('Inspection')) {
+                        needs.ut++;
+                    } else if (gate.nextProcess.includes('Repair')) {
+                        needs.repair++;
+                    }
+                }
+            });
+            
+            console.log('   Total matches (unassigned + delay≥60):', matchCount);
+            console.log('   Breakdown - SAW:', needs.saw, 'UT:', needs.ut, 'Repair:', needs.repair);
+            
+            return needs;
+        }
+        
+        // Generate insights (bottlenecks, IPK, delay causes)
+        function generateInsights(selectedMod = null) {
+            const insights = [];
+            
+            // Mod-level bottleneck detection (filter by selected mod)
+            const modProcessDelays = {};
+            gatesData.forEach(gate => {
+                // Only analyze the selected mod
+                if (selectedMod && gate.mod !== selectedMod) return;
+                
+                if (gate.delay >= 60) {
+                    const key = `Mod${gate.mod}-${gate.process.split('-')[0]}`;
+                    if (!modProcessDelays[key]) {
+                        modProcessDelays[key] = { count: 0, totalDelay: 0, mod: gate.mod, process: gate.process.split('-')[0] };
+                    }
+                    modProcessDelays[key].count++;
+                    modProcessDelays[key].totalDelay += gate.delay;
+                }
+            });
+            
+            Object.values(modProcessDelays).forEach(item => {
+                if (item.count >= 3) {
+                    const avgDelay = Math.round(item.totalDelay / item.count);
+                    insights.push({
+                        title: '🚧 BOTTLENECK DETECTED',
+                        text: `Mod${item.mod}: ${item.process} process | ${item.count} gates delayed avg ${avgDelay}min → Check equipment & crew`
+                    });
+                }
+            });
+            
+            // IPK warnings (simulated - in reality from MES)
+            const ipkGates = gatesData.filter((g, i) => {
+                if (selectedMod && g.mod !== selectedMod) return false;
+                return i % 25 === 0 && g.delay > 50;
+            });
+            if (ipkGates.length > 0) {
+                const ipkTexts = ipkGates.slice(0, 2).map(g => `G${g.gate} ${g.process}`).join(', ');
+                insights.push({
+                    title: '⚠️ IPK DWELL ALERT',
+                    text: `IPK >2h: ${ipkTexts} | Check Growing Line input availability`
+                });
+            }
+            
+            // Top delay causes (simulated - in reality from MES labels)
+            // Only show if no mod-specific insights or selected mod has issues
+            if (insights.length < 2) {
+                const delayCauses = [
+                    { cause: 'UT Pending', count: 12, avgMin: 95 },
+                    { cause: 'Repair Queue', count: 8, avgMin: 120 },
+                    { cause: 'SAW Wait', count: 6, avgMin: 75 }
+                ];
+                
+                let causeText = 'Weekly top delay causes:<br>';
+                delayCauses.forEach((c, i) => {
+                    causeText += `${i + 1}. ${c.cause}: ${c.count} cases (avg ${c.avgMin}min)<br>`;
+                });
+                insights.push({
+                    title: '📊 DELAY ANALYSIS',
+                    text: causeText
+                });
+            }
+            
+            return insights;
+        }
+        
+        // Update shift bar
+        function updateShiftBar() {
+            const now = new Date();
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+            
+            // Current time display
+            const timeString = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+            document.getElementById('currentTime').textContent = timeString;
+            
+            const isDayShift = hour >= 6 && hour < 18;
+            const shiftLabel = document.getElementById('shiftLabel');
+            const shiftTime = document.getElementById('shiftTime');
+            
+            if (isDayShift) {
+                shiftLabel.textContent = 'Day Shift';
+                shiftTime.textContent = '06:00 - 18:00';
+            } else {
+                shiftLabel.textContent = 'Night Shift';
+                shiftTime.textContent = '18:00 - 06:00';
+            }
+            
+            // Today GT: 3 completed / 7 expected
+            const gtCompleted = 3; // In real implementation, from MES completed count today
+            const gtExpected = 7;  // Gates with remaining steps ≤2 and delay <30
+            const todayPercent = Math.round((gtCompleted / gtExpected) * 100);
+            
+            document.getElementById('gtCompleted').textContent = gtCompleted;
+            document.getElementById('gtExpected').textContent = gtExpected;
+            document.getElementById('todayProgressFill').style.width = `${todayPercent}%`;
+            
+            // Weekly GT: 12 completed / 14 target (Wed Night Shift)
+            const weeklyCompleted = 12; // In real: sum of Mon~Wed completed GTs
+            const weeklyTarget = 14;    // Expected GT count by Wed Night Shift end
+            const weeklyPercent = Math.round((weeklyCompleted / weeklyTarget) * 100);
+            
+            document.getElementById('weeklyCompleted').textContent = weeklyCompleted;
+            document.getElementById('weeklyTarget').textContent = weeklyTarget;
+            document.getElementById('weeklyProgressFill').style.width = `${weeklyPercent}%`;
+        }
+        
+        setInterval(() => {
+            minutesElapsed++;
+            document.getElementById('updateTime').textContent = `${minutesElapsed}min ago`;
+            
+            const icon = document.getElementById('freshnessIcon');
+            if (minutesElapsed >= 10) {
+                icon.textContent = '⚠️';
+                icon.style.color = '#d63447';
+            } else {
+                icon.textContent = '✔️';
+                icon.style.color = '#00ff88';
+            }
+            
+            if (Math.random() > 0.7) {
+                const randomGate = gatesData[Math.floor(Math.random() * gatesData.length)];
+                randomGate.delay = Math.max(0, randomGate.delay + Math.floor(Math.random() * 20) - 10);
+                generatePriorityAlerts();
+                updateShiftBar();
+            }
+        }, 60000);
+
+        initializeData();
+        updatePriorityBar('all');
+        renderGateCards();
+        updateShiftBar();
+        
+        // Update current time every second
+        setInterval(() => {
+            const now = new Date();
+            const hour = now.getHours();
+            const minute = now.getMinutes();
+            const timeString = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+            document.getElementById('currentTime').textContent = timeString;
+        }, 1000);
+    </script>
+</body>
+</html>                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             
